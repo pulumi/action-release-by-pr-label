@@ -1,0 +1,30 @@
+name: "Tests"
+env:
+  GITHUB_TOKEN: ${{ secrets.PULUMI_BOT_TOKEN }}
+
+jobs:
+  Test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: mfinelli/setup-shfmt@v3
+      - name: actionlint
+        uses: raven-actions/actionlint@v1
+      - name: Run Lint
+        run: make lint
+      - name: Setup BATS
+        uses: mig4/setup-bats@v1
+        with:
+          bats-version: 1.5.0
+      - name: Run Tests
+        run: bats --trace --print-output-on-failure test/
+
+on:
+  workflow_call:
+    secrets:
+      PULUMI_BOT_TOKEN:
+        required: true
+  pull_request:
+    branches:
+      - master

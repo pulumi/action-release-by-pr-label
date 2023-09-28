@@ -1,0 +1,39 @@
+name: Release by PR label
+description: GitHub actions to facilitate marking PRs as needing release using labels and then triggering releases from those labels at a later point
+
+inputs:
+  command:
+    description: The command to run. Either "should-release", "release-if-needed", or "clean-up-release-labels"
+    required: true
+  repo:
+    description: The repository to operate on
+    default: ${{ github.repository }}
+    required: false
+  pr:
+    description: The pr to mark for release (only required for "should-release")
+    required: false
+  version:
+    description: The version to release the pr under (only required for "should-release")
+    required: false
+  commit:
+    description: The commit to (possibly) release for "release-if-needed", or that was released for "clean-up-release-labels"
+    required: false
+  slack_channel:
+    description: Optional slack channel for relase-bot to announce on
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - if: inputs.command == 'should-release'
+      name: Should release
+      shell: bash
+      run: ${GITHUB_ACTION_PATH}/src/should-release.sh --repo=${{ inputs.repo }} --pr=${{ inputs.pr }} --version=${{ inputs.version }} --release-bot-key="$RELEASE_BOT_KEY" --release-bot-endpoint="$RELEASE_BOT_ENDPOINT" --slack-channel=${{ inputs.slack_channel }}
+    - if: inputs.command == 'release-if-needed'
+      name: Release if needed
+      shell: bash
+      run: ${GITHUB_ACTION_PATH}/src/release-if-needed.sh --repo=${{ inputs.repo }} --commit=${{ inputs.commit }} --release-bot-key="$RELEASE_BOT_KEY" --release-bot-endpoint="$RELEASE_BOT_ENDPOINT" --slack-channel=${{ inputs.slack_channel }}
+    - if: inputs.command == 'clean-up-release-labels'
+      name: Clean up release labels
+      shell: bash
+      run: ${GITHUB_ACTION_PATH}/src/remove-needs-release-labels-for-commit.sh --repo=${{ inputs.repo }} --commit=${{ inputs.commit }}

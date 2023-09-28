@@ -1,0 +1,75 @@
+name: Verify
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  PR: 1
+  VERSION: "v0.0.1"
+  SHA: 8de77745e9d0022317fdc3efe30e4a785f93a329
+concurrency: integration_on_live_PRs
+jobs:
+  test:
+    uses: ./.github/workflows/tests.yml
+    secrets: inherit
+  integration:
+    name: integration test
+    runs-on: ubuntu-latest
+    steps:
+      # preconditions
+      - name: Checkout Scripts Repo
+        uses: actions/checkout@v3
+      - name: Unshallow clone for tags
+        run: git fetch --prune --unshallow --tags
+      - name: Label not present
+        run: gh pr edit "$PR" --repo="$GITHUB_REPOSITORY" --remove-label "needs-release/$VERSION" || true
+      - name: Tag is not present
+        run: git push -d origin "v0.0.1" || true
+
+      # simulate /release command
+      - name: Should release PR
+        uses: pulumi/action-release-by-pr-label@main
+        with:
+          command: "should-release"
+          repo: ${{ github.repository }}
+          pr: ${{ env.PR }}
+          version: ${{ env.VERSION }}
+        env:
+          RELEASE_BOT_ENDPOINT: ${{ secrets.RELEASE_BOT_ENDPOINT }}
+          RELEASE_BOT_KEY: ${{ secrets.RELEASE_BOT_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check label was added
+        run: |
+          src/pr-need-release-labels.sh --repo="$GITHUB_REPOSITORY" "--pr=$PR" | grep "$VERSION"
+
+      # simulate post-main/master job flagging release bot
+      - name: check if this commit needs release
+        uses: pulumi/action-release-by-pr-label@main
+        with:
+          command: "release-if-needed"
+          repo: ${{ github.repository }}
+          commit: ${{ env.SHA }}
+          slack_channel: ${{ secrets.RELEASE_OPS_STAGING_SLACK_CHANNEL }}
+        env:
+          RELEASE_BOT_ENDPOINT: ${{ secrets.RELEASE_BOT_ENDPOINT }}
+          RELEASE_BOT_KEY: ${{ secrets.RELEASE_BOT_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check tag was added
+        run: git fetch origin "refs/tags/$VERSION":"refs/tags/$VERSION" && git rev-parse "$VERSION"
+
+      # simulate post-release job label cleanup
+      - name: Clean up release labels
+        uses: pulumi/action-release-by-pr-label@main
+        with:
+          command: "clean-up-release-labels"
+          repo: ${{ github.repository }}
+          commit: ${{ env.SHA }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # clean up
+      - name: Remove tag
+        run: git push -d origin "v0.0.1" || true
+
+
+on:
+  push:
+    branches:
+    - main
