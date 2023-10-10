@@ -61,7 +61,10 @@ rm private_key.pem
 # some versions of openssl add this prefix which we don't need
 sed -e 's/SHA2-256(stdin)= //g' -i".bak" sig
 
-curl -v -X POST \
+# debug logging body since curl does not log it for us
+echo "INFO: calling release bot with body: '$(cat body)'" >&2
+
+curl -v --fail-with-body -X POST \
   --header "Content-Type: application/json" \
   --header "X-Signature: $(cat sig)" \
   --data-binary @body \
