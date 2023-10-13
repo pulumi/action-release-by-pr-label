@@ -42,6 +42,12 @@ if ! echo "$repo" | grep '^pulumi/.*$'; then
 fi
 repo=${repo#"pulumi/"}
 
+version_pattern="^\(major\|minor\|patch\|v[0-9]\+\.[0-9]\+\.[0-9]\+\)$"
+if [ "$(echo "$version" | grep "$version_pattern")" != "$version" ]; then
+  echo "Requested version ($version) does not match expected pattern: '$version_pattern'"
+  die
+fi
+
 tempdir=$(mktemp -d)
 cd "$tempdir"
 trap 'rm -rf "$tempdir"; cd -' EXIT

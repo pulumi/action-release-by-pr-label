@@ -7,18 +7,29 @@ setup() {
   DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" >/dev/null 2>&1 && pwd)"
   # make executables in src/ visible to PATH
   PATH="$DIR/../src:$PATH"
+
+  # generate a fake key so we don't error creating the signature
+  openssl genrsa -out private.pem 1024
+  KEY="$(cat private.pem)"
+  rm private.pem
 }
 
 @test "release-bot errors are script errors" {
-  # generate a fake key so we don't error creating the signature
-  openssl genrsa -out private.pem 1024
   # trying to post to example.com/release returns a 404
   run invoke_tag_release.sh \
     --repo=pulumi/foo \
-    --version=foo \
-    --key="$(cat private.pem)" \
+    --version=minor \
+    --key="$KEY" \
     --endpoint="https://example.com"
-  # cleanup key file
-  rm private.pem
   [ "$status" -eq 22 ]
+}
+
+@test "fail-fast on invalid versions" {
+  # trying to post to example.com/release returns a 404
+  run invoke_tag_release.sh \
+    --repo=pulumi/foo \
+    --version=impact/no-changlog-required \
+    --key="$KEY" \
+    --endpoint="https://example.com"
+  [ "$status" -eq 1 ]
 }
