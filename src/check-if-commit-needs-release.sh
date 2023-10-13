@@ -31,7 +31,7 @@ gh pr list \
   --repo "$repo" \
   --state merged \
   --search "$commit" \
-  --json labels --jq '.[].labels[].name' ||
-  echo "" |
+  --json labels --jq '.[].labels[].name' |
   grep -o "^needs-release/.*$" |
-    head -n 1
+  head -n 1 ||
+  echo ""
