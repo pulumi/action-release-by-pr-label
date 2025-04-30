@@ -1,9 +1,15 @@
+permissions: write-all # Equivalent to default permissions plus id-token: write
 name: Verify
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   PR: 1
   VERSION: "v0.0.1"
   SHA: 8de77745e9d0022317fdc3efe30e4a785f93a329
+  ESC_ACTION_OIDC_AUTH: true
+  ESC_ACTION_OIDC_ORGANIZATION: pulumi
+  ESC_ACTION_OIDC_REQUESTED_TOKEN_TYPE: urn:pulumi:token-type:access_token:organization
+  ESC_ACTION_ENVIRONMENT: imports/github-secrets
+  ESC_ACTION_EXPORT_ENVIRONMENT_VARIABLES: false
 concurrency: integration_on_live_PRs
 jobs:
   test:
@@ -14,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # preconditions
+      - name: Fetch secrets from ESC
+        id: esc-secrets
+        uses: pulumi/esc-action@v1
       - name: Checkout Scripts Repo
         uses: actions/checkout@v3
       - name: Unshallow clone for tags
@@ -22,8 +31,6 @@ jobs:
         run: gh pr edit "$PR" --repo="$GITHUB_REPOSITORY" --remove-label "needs-release/$VERSION" || true
       - name: Tag is not present
         run: git push -d origin "v0.0.1" || true
-
-      # simulate /release command
       - name: Should release PR
         uses: pulumi/action-release-by-pr-label@main
         with:
@@ -32,29 +39,25 @@ jobs:
           pr: ${{ env.PR }}
           version: ${{ env.VERSION }}
         env:
-          RELEASE_BOT_ENDPOINT: ${{ secrets.RELEASE_BOT_ENDPOINT }}
-          RELEASE_BOT_KEY: ${{ secrets.RELEASE_BOT_KEY }}
+          RELEASE_BOT_ENDPOINT: ${{ steps.esc-secrets.outputs.RELEASE_BOT_ENDPOINT }}
+          RELEASE_BOT_KEY: ${{ steps.esc-secrets.outputs.RELEASE_BOT_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Check label was added
         run: |
           src/pr-need-release-labels.sh --repo="$GITHUB_REPOSITORY" "--pr=$PR" | grep "$VERSION"
-
-      # simulate post-main/master job flagging release bot
       - name: check if this commit needs release
         uses: pulumi/action-release-by-pr-label@main
         with:
           command: "release-if-needed"
           repo: ${{ github.repository }}
           commit: ${{ env.SHA }}
-          slack_channel: ${{ secrets.RELEASE_OPS_STAGING_SLACK_CHANNEL }}
+          slack_channel: ${{ steps.esc-secrets.outputs.RELEASE_OPS_STAGING_SLACK_CHANNEL }}
         env:
-          RELEASE_BOT_ENDPOINT: ${{ secrets.RELEASE_BOT_ENDPOINT }}
-          RELEASE_BOT_KEY: ${{ secrets.RELEASE_BOT_KEY }}
+          RELEASE_BOT_ENDPOINT: ${{ steps.esc-secrets.outputs.RELEASE_BOT_ENDPOINT }}
+          RELEASE_BOT_KEY: ${{ steps.esc-secrets.outputs.RELEASE_BOT_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Check tag was added
         run: git fetch origin "refs/tags/$VERSION":"refs/tags/$VERSION" && git rev-parse "$VERSION"
-
-      # simulate post-release job label cleanup
       - name: Clean up release labels
         uses: pulumi/action-release-by-pr-label@main
         with:
@@ -63,11 +66,8 @@ jobs:
           commit: ${{ env.SHA }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # clean up
       - name: Remove tag
         run: git push -d origin "v0.0.1" || true
-
 
 on:
   push:
