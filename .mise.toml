@@ -1,0 +1,5 @@
+[tools]
+bats = "1.5.0"
+shfmt = "3.11.0"
+actionlint = "1.7.7"
+shellcheck = "0.10.0"

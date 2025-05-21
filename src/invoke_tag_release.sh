@@ -60,6 +60,8 @@ if [ -n "${channel-}" ]; then
   maybe_channel=", 'channel':'$channel'"
 fi
 
+commit=${commit#""}
+
 echo -n "{'repo': '$repo', 'version':'$version', 'timestamp':'$(date +%s)', 'commit':'$commit'$maybe_channel}" |
   tr "'" '"' >body
 
