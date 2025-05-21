@@ -14,7 +14,7 @@ jobs:
       - name: Run Lint
         run: make lint
       - name: Run Tests
-        run: bats --trace --print-output-on-failure test/
+        run: make test
 
 on:
   workflow_call:
