@@ -15,7 +15,7 @@ jobs:
     steps:
       # preconditions
       - name: Checkout Scripts Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Unshallow clone for tags
         run: git fetch --prune --unshallow --tags
       - name: Label not present
