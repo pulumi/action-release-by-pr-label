@@ -24,6 +24,9 @@ for i in "$@"; do
   -c=* | --channel=*)
     channel="${i#*=}"
     ;;
+  --commit=*)
+    commit="${i#*=}"
+    ;;
   *)
     echo "unknown option $i"
     die
@@ -57,7 +60,7 @@ if [ -n "${channel-}" ]; then
   maybe_channel=", 'channel':'$channel'"
 fi
 
-echo -n "{'repo': '$repo', 'version':'$version', 'timestamp':'$(date +%s)'$maybe_channel}" |
+echo -n "{'repo': '$repo', 'version':'$version', 'timestamp':'$(date +%s)', 'commit':'$commit'$maybe_channel}" |
   tr "'" '"' >body
 
 echo "$key" >private_key.pem
@@ -70,7 +73,7 @@ sed -e 's/SHA2-256(stdin)= //g' -i".bak" sig
 # debug logging body since curl does not log it for us
 echo "INFO: calling release bot with body: '$(cat body)'" >&2
 
-curl -v --fail-with-body -X POST \
+curl -v --fail-with-body \
   --header "Content-Type: application/json" \
   --header "X-Signature: $(cat sig)" \
   --data-binary @body \
