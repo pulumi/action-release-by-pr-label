@@ -46,4 +46,4 @@ if [ -z "$version" ]; then
 fi
 
 "$script_dir/invoke_tag_release.sh" \
-  --repo="$repo" --version="$version" --key="$key" --endpoint="$endpoint" --channel="${channel:-}"
+  --repo="$repo" --version="$version" --key="$key" --endpoint="$endpoint" --channel="${channel:-}" --commit="${commit}"
