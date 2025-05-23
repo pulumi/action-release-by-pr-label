@@ -7,18 +7,14 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: mfinelli/setup-shfmt@v3
-      - name: actionlint
-        uses: raven-actions/actionlint@v1
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+        with:
+          version: 2025.5.8
       - name: Run Lint
         run: make lint
-      - name: Setup BATS
-        uses: mig4/setup-bats@v1
-        with:
-          bats-version: 1.5.0
       - name: Run Tests
-        run: bats --trace --print-output-on-failure test/
+        run: make test
 
 on:
   workflow_call:
