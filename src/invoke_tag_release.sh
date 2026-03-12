@@ -75,8 +75,30 @@ sed -e 's/SHA2-256(stdin)= //g' -i".bak" sig
 # debug logging body since curl does not log it for us
 echo "INFO: calling release bot with body: '$(cat body)'" >&2
 
-curl -v --fail-with-body \
-  --header "Content-Type: application/json" \
-  --header "X-Signature: $(cat sig)" \
-  --data-binary @body \
-  "$endpoint/tag_release"
+max_retries=5
+attempt=0
+http_body=$(mktemp)
+while true; do
+  http_code=$(curl -v -s -o "$http_body" -w "%{http_code}" \
+    --header "Content-Type: application/json" \
+    --header "X-Signature: $(cat sig)" \
+    --data-binary @body \
+    "$endpoint/tag_release")
+
+  if [ "$http_code" = "429" ] && [ "$attempt" -lt "$max_retries" ]; then
+    attempt=$((attempt + 1))
+    wait=$((attempt * 30))
+    echo "Rate limited by GitHub API. Retrying in ${wait}s (attempt $attempt/$max_retries)..." >&2
+    sleep "$wait"
+    continue
+  fi
+  break
+done
+
+cat "$http_body"
+rm -f "$http_body"
+
+if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+  echo "curl: (22) The requested URL returned error: $http_code" >&2
+  exit 22
+fi
