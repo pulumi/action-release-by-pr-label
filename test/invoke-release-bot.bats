@@ -11,6 +11,8 @@ setup() {
   # generate a fake key so we don't error creating the signature
   openssl genrsa -out private.pem 1024
   KEY="$(cat private.pem)"
+  # simulate ESC secrets which store PEM keys as single-line strings with literal \n
+  KEY_ESCAPED="$(awk '{printf "%s\\n", $0}' private.pem)"
   rm private.pem
 }
 
@@ -20,6 +22,16 @@ setup() {
     --repo=pulumi/foo \
     --version=minor \
     --key="$KEY" \
+    --endpoint="https://example.com"
+  [ "$status" -eq 22 ]
+}
+
+@test 'handles keys with literal \n sequences (e.g. from ESC secrets)' {
+  # ESC stores PEM keys as single-line strings with literal \n instead of newlines
+  run invoke_tag_release.sh \
+    --repo=pulumi/foo \
+    --version=minor \
+    --key="$KEY_ESCAPED" \
     --endpoint="https://example.com"
   [ "$status" -eq 22 ]
 }

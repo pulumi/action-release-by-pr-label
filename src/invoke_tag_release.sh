@@ -65,7 +65,7 @@ commit=${commit:-}
 echo -n "{'repo': '$repo', 'version':'$version', 'timestamp':'$(date +%s)', 'commit':'$commit'$maybe_channel}" |
   tr "'" '"' >body
 
-echo "$key" >private_key.pem
+printf '%b\n' "$key" >private_key.pem
 openssl dgst -sha256 -sign private_key.pem -hex <body >sig
 rm private_key.pem
 
