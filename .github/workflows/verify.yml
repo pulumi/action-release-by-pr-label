@@ -17,6 +17,7 @@ jobs:
     secrets: inherit
   integration:
     name: integration test
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       # preconditions
@@ -68,6 +69,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Remove tag
         run: git push -d origin "v0.0.1" || true
+      - name: Restore test fixture label
+        if: always()
+        run: gh pr edit "$PR" --repo="$GITHUB_REPOSITORY" --add-label "needs-release/$VERSION" || true
 
 on:
   push:
